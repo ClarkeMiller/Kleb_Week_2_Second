@@ -255,6 +255,7 @@ def get_output_headers(args, data_folder):
             read_class_file(data_folder + '/CARD_AMR_clustered.csv')
         res_headers = get_res_headers(res_classes, bla_classes)
         res_headers += ['truncated_resistance_hits', 'spurious_resistance_hits']
+        res_headers += ['Cipro_prediction','Cipro_prediction_support']
         stdout_header += res_headers
         full_header += res_headers
     else:
@@ -577,7 +578,68 @@ def get_resistance_results(data_folder, contigs, args, res_headers, kp_complex):
                 sys.exit( f'Error: results contained a value ({h}) that is not covered by the '
                           f'output headers')
 
-        return {r: ';'.join(sorted(res_hits[r])) if r in res_hits else '-' for r in res_headers}
+        res_hits_dict=({r: ';'.join(sorted(res_hits[r])) if r in res_hits else '-' for r in res_headers})
+
+        #Ciprofloxacin resistance prediction
+
+        #Adding aac(6')-Ib-cr to Flq_acquired column
+        if "aac(6')-Ib-cr.v1" in res_hits_dict["AGly_acquired"]:
+            res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v1")
+        elif "aac(6')-Ib-cr.v1" in res_hits_dict["AGly_acquired"]:
+            res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v2")
+
+
+        # 0 Flq_mutations, 0 Flq_acquired, 0 aac6
+            # test: KP_NORM_URN_105939
+        if ("Flq_mutations", "-") in res_hits_dict.items() and ("Flq_acquired", "-") in res_hits_dict.items() and "aac(6')-Ib-cr" not in res_hits_dict["AGly_acquired"]:
+            res_hits_dict["Cipro_prediction"]="S"
+            res_hits_dict["Cipro_prediction_support"]="95"
+
+        # 0 Flq_mutations, 0 Flq_acquired, 1 aac6
+            # test: ERR4635459
+        elif ("Flq_mutations", "-") in res_hits_dict.items() and ("Flq_acquired", "-") in res_hits_dict.items() and "aac(6')-Ib-cr" in res_hits_dict["AGly_acquired"]:
+            res_hits_dict["Cipro_prediction"]="S"
+            res_hits_dict["Cipro_prediction_support"]="81"
+
+        # 1 Flq_mutations, 0 Flq_acquired, >=0 aac6
+            # test: ERR4046108_NHP1975 (with aac), NK_H5_026 (no aac)
+        elif len(set(res_hits_dict["Flq_mutations"].split(";")))==1 and ("Flq_acquired", "-") in res_hits_dict.items():
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="72"
+
+        # >=2 Flq_mutations, 0 Flq_acquired, >=0 aac6
+            # test: G20250619 (with aac), G20250926 (no aac)
+        elif len(set(res_hits_dict["Flq_mutations"].split(";")))>=2 and ("Flq_acquired", "-") in res_hits_dict.items():
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="99"
+
+        # 0 Flq_mutations, 1 Flq_acquired, 0 aac6
+            # test: ERR486365
+        elif ("Flq_mutations", "-") in res_hits_dict.items() and len(set(res_hits_dict["Flq_acquired"].split(";")))==1  and "aac(6')-Ib-cr" not in res_hits_dict["AGly_acquired"]:
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="70"
+
+        # 0 Flq_mutations, 1 Flq_acquired, 1 aac6
+            # test: HE205
+        elif ("Flq_mutations", "-") in res_hits_dict.items() and len(set(res_hits_dict["Flq_acquired"].split(";")))==1  and "aac(6')-Ib-cr" in res_hits_dict["AGly_acquired"]:
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="93"
+
+        # 0 Flq_mutations, >=2 Flq_acquired, >=0 aac6
+            # test: ERR3480591 (with aac), ERR4635120 (no aac)
+        elif ("Flq_mutations", "-") in res_hits_dict.items() and len(set(res_hits_dict["Flq_acquired"].split(";")))>=2:
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="97"
+
+        # >=1 Flq_mutations, >=1 Flq_acquired, >=0 aac6
+            # test: ERR3567346_NHP139 (with aac), ERR3585150_BMP790 (no aac)
+        elif len(set(res_hits_dict["Flq_mutations"].split(";")))>=1 and len(set(res_hits_dict["Flq_acquired"].split(";")))>=1:
+            res_hits_dict["Cipro_prediction"]="R"
+            res_hits_dict["Cipro_prediction_support"]="99"
+
+        #return {r: ';'.join(sorted(res_hits[r])) if r in res_hits else '-' for r in res_headers}
+        return res_hits_dict
+        
     else:
         return {}
 
