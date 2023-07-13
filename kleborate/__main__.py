@@ -584,10 +584,19 @@ def get_resistance_results(data_folder, contigs, args, res_headers, kp_complex):
 
         #Adding aac(6')-Ib-cr to Flq_acquired column
         if "aac(6')-Ib-cr.v1" in res_hits_dict["AGly_acquired"]:
-            res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v1")
-        elif "aac(6')-Ib-cr.v1" in res_hits_dict["AGly_acquired"]:
-            res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v2")
-
+            if ("Flq_acquired", "-") in res_hits_dict.items():
+                res_hits_dict["Flq_acquired"]="aac(6')-Ib-cr.v1"
+            elif len([res_hits_dict["Flq_acquired"]]) == 1:
+                res_hits_dict["Flq_acquired"]=res_hits_dict["Flq_acquired"]+";aac(6')-Ib-cr.v1"
+            else:
+                res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v1")
+        elif "aac(6')-Ib-cr.v2" in res_hits_dict["AGly_acquired"]:
+            if ("Flq_acquired", "-") in res_hits_dict.items():
+                res_hits_dict["Flq_acquired"]="aac(6')-Ib-cr.v2"
+            elif len([res_hits_dict["Flq_acquired"]]) == 1:
+                res_hits_dict["Flq_acquired"]=res_hits_dict["Flq_acquired"]+";aac(6')-Ib-cr.v2"
+            else:
+                res_hits_dict.setdefault("Flq_acquired",[]).append("aac(6')-Ib-cr.v2")
 
         # 0 Flq_mutations, 0 Flq_acquired, 0 aac6
             # test: KP_NORM_URN_105939
